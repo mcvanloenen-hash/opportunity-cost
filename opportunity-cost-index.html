@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Opportunity Cost Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f4f8;color:#1a202c;font-size:14px}
+
+/* ── HEADER ── */
+.header{background:linear-gradient(135deg,#1a3a5c 0%,#2563a8 100%);color:#fff;padding:18px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.header h1{font-size:20px;font-weight:800;letter-spacing:-.3px}
+.header .sub{font-size:12px;opacity:.75;margin-top:3px}
+
+/* ── CLIENT BAR ── */
+.client-bar{background:#fff;border-bottom:2px solid #e2e8f0;padding:12px 28px;display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end}
+.fg{display:flex;flex-direction:column;gap:3px}
+.fg label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#718096}
+.fg input{border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;font-size:13px;color:#2d3748;background:#fff;transition:border .15s}
+.fg input:focus{outline:none;border-color:#2563a8;background:#f0f7ff}
+
+.bm-group{margin-left:auto;display:flex;flex-direction:column;gap:4px}
+.bm-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#718096}
+.bm-row{display:flex;gap:8px;flex-wrap:wrap}
+.bm-item{display:flex;align-items:center;gap:7px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:8px;padding:5px 12px}
+.bm-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.bm-item span{font-size:12px;font-weight:700;color:#4a5568}
+.bm-item input{width:55px;border:1px solid #cbd5e0;border-radius:4px;padding:4px 6px;font-size:13px;text-align:center;font-weight:600}
+.bm-item input:focus{outline:none;border-color:#2563a8}
+.bm-unit{font-size:11px;color:#a0aec0}
+
+/* ── MAIN ── */
+.page{padding:22px 28px;max-width:1600px}
+
+/* ── SECTION CARD ── */
+.card-wrap{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.07);margin-bottom:22px;overflow:hidden}
+.sec-head{padding:14px 18px;border-bottom:1px solid #f0f4f8;display:flex;justify-content:space-between;align-items:center}
+.sec-title{font-size:14px;font-weight:800;color:#1a202c}
+.sec-desc{font-size:11px;color:#a0aec0;margin-top:2px}
+
+/* ── DIVIDER ── */
+.divider{display:flex;align-items:center;gap:14px;margin:28px 0 20px}
+.divider-line{flex:1;height:2px;background:linear-gradient(90deg,#e2e8f0,#cbd5e0)}
+.divider-label{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#4a5568;background:#f0f4f8;padding:0 4px;white-space:nowrap}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:7px;border:none;cursor:pointer;font-size:12px;font-weight:700;transition:all .15s}
+.btn-primary{background:#1a3a5c;color:#fff}.btn-primary:hover{background:#2563a8}
+.btn-example{background:#e0f2fe;color:#075985;border:1px solid #bae6fd}.btn-example:hover{background:#bae6fd}
+.btn-del{background:#fff5f5;color:#e53e3e;border:1px solid #fed7d7;padding:4px 9px;font-size:11px}.btn-del:hover{background:#fed7d7}
+
+/* ── TABLE ── */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#f7fafc;padding:9px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#718096;border-bottom:1px solid #e2e8f0;white-space:nowrap}
+th.calc-head{background:#dbeafe;color:#1e40af}
+th.liab-head{background:#fef3c7;color:#92400e}
+td{padding:7px 10px;border-bottom:1px solid #f7fafc;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafbff}
+td input,td select{border:1px solid #e8edf2;border-radius:4px;padding:5px 7px;font-size:12px;width:100%;background:#fff;transition:border .15s}
+td input:focus,td select:focus{outline:none;border-color:#2563a8;background:#f0f7ff}
+.num-inp{text-align:right}
+
+/* calculated cells */
+.calc-td{background:#eff6ff;text-align:center;font-weight:700;font-size:12px;color:#1e40af;white-space:nowrap}
+/* liability cells */
+.liab-td{background:#fffbeb}
+/* colour classes */
+.pos{color:#15803d!important}.neg{color:#dc2626!important}
+/* vertical divider */
+.col-divider{border-left:2px solid #e2e8f0!important}
+
+/* ── SUMMARY CARDS ── */
+.sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px}
+.sum-card{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.sum-card .lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#718096}
+.sum-card .val{font-size:24px;font-weight:900;color:#1a202c;margin-top:4px;line-height:1}
+.sum-card .sub{font-size:11px;color:#a0aec0;margin-top:4px}
+.sum-card.navy{background:linear-gradient(135deg,#1a3a5c,#2563a8)}.sum-card.navy .lbl,.sum-card.navy .val,.sum-card.navy .sub{color:#fff}
+.sum-card.green{background:linear-gradient(135deg,#14532d,#15803d)}.sum-card.green .lbl,.sum-card.green .val,.sum-card.green .sub{color:#fff}
+.sum-card.red{background:linear-gradient(135deg,#7f1d1d,#b91c1c)}.sum-card.red .lbl,.sum-card.red .val,.sum-card.red .sub{color:#fff}
+.sum-card.amber{background:linear-gradient(135deg,#78350f,#b45309)}.sum-card.amber .lbl,.sum-card.amber .val,.sum-card.amber .sub{color:#fff}
+
+/* ── CHARTS ── */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+.chart-card{background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.chart-title{font-size:13px;font-weight:800;color:#1a202c}
+.chart-sub{font-size:11px;color:#a0aec0;margin-top:2px;margin-bottom:14px}
+
+/* ── OPP TABLE ── */
+.opp-head th{background:#1a3a5c;color:#fff}
+.missed{color:#dc2626;font-weight:800}
+.beat{color:#15803d;font-weight:800}
+
+/* ── INSIGHT BOX ── */
+.insight{background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:14px 18px;margin-bottom:20px}
+.insight h3{font-size:13px;font-weight:800;color:#78350f;margin-bottom:7px}
+.insight li{font-size:12px;color:#92400e;padding:2px 0 2px 16px;position:relative;list-style:none}
+.insight li::before{content:"→";position:absolute;left:0;font-weight:700}
+
+/* ── GROWTH ── */
+.growth-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #f0f4f8}
+.growth-head select{border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:600}
+
+.empty{text-align:center;padding:28px;color:#a0aec0;font-size:13px}
+
+@media(max-width:950px){
+  .charts-row{grid-template-columns:1fr}
+  .client-bar{flex-direction:column;align-items:flex-start}
+  .bm-group{margin-left:0}
+  .page{padding:14px}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <h1>📊 Opportunity Cost Dashboard</h1>
+    <div class="sub">Property vs. Market Returns — illustrating the cost of concentration</div>
+  </div>
+  <button class="btn btn-example" onclick="loadExample()">⚡ Load Example Data</button>
+</div>
+
+<!-- CLIENT + BENCHMARKS BAR -->
+<div class="client-bar">
+  <div class="fg">
+    <label>Client Name</label>
+    <input type="text" id="clientName" placeholder="e.g. John &amp; Jane Smith" style="width:220px" oninput="refreshAnalysis()">
+  </div>
+  <div class="fg">
+    <label>Report Date</label>
+    <input type="text" id="reportDate" style="width:130px">
+  </div>
+  <div class="bm-group">
+    <span class="bm-label">Benchmark Annual Returns (editable)</span>
+    <div class="bm-row">
+      <div class="bm-item">
+        <div class="bm-dot" style="background:#2563a8"></div>
+        <span>S&amp;P 500</span>
+        <input type="number" id="sp500Rate" value="10" step="0.1" min="0" max="30" oninput="recalcAll()">
+        <span class="bm-unit">% p.a.</span>
+      </div>
+      <div class="bm-item">
+        <div class="bm-dot" style="background:#f59e0b"></div>
+        <span>ASX 200</span>
+        <input type="number" id="asx200Rate" value="9" step="0.1" min="0" max="30" oninput="recalcAll()">
+        <span class="bm-unit">% p.a.</span>
+      </div>
+      <div class="bm-item">
+        <div class="bm-dot" style="background:#7c3aed"></div>
+        <span>Custom</span>
+        <input type="number" id="customRate" value="7" step="0.1" min="0" max="30" oninput="recalcAll()">
+        <span class="bm-unit">% p.a.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- ════════════ SECTION 1 — PROPERTIES ════════════ -->
+  <div class="card-wrap">
+    <div class="sec-head">
+      <div>
+        <div class="sec-title">🏠 Client Properties</div>
+        <div class="sec-desc">Enter each property with its associated mortgage. Blue columns calculate automatically; amber columns are liability details.</div>
+      </div>
+      <button class="btn btn-primary" onclick="addPropRow()">+ Add Property</button>
+    </div>
+    <div class="table-wrap">
+      <table id="propTable">
+        <thead>
+          <tr>
+            <th style="min-width:170px">Property / Address</th>
+            <th style="min-width:115px">Type</th>
+            <th style="min-width:90px">Year Purchased</th>
+            <th style="min-width:130px">Purchase Price ($)</th>
+            <th style="min-width:130px">Current Value ($)</th>
+            <th class="calc-head" style="min-width:75px">Years Held</th>
+            <th class="calc-head" style="min-width:75px">CAGR</th>
+            <th class="calc-head" style="min-width:90px">Total Return</th>
+            <th class="calc-head col-divider" style="min-width:110px">Equity</th>
+            <th class="liab-head" style="min-width:130px">Mortgage Balance ($)</th>
+            <th class="liab-head" style="min-width:100px">Interest Rate (%)</th>
+            <th class="liab-head" style="min-width:150px">Loan Notes</th>
+            <th style="width:36px"></th>
+          </tr>
+        </thead>
+        <tbody id="propBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════════════ SECTION 2 — ANALYSIS ════════════ -->
+  <div class="divider">
+    <div class="divider-line"></div>
+    <div class="divider-label">📊 Analysis &amp; Opportunity Cost</div>
+    <div class="divider-line"></div>
+  </div>
+
+  <div id="sumGrid" class="sum-grid"></div>
+
+  <div id="insightBox" class="insight" style="display:none">
+    <h3>⚠️ Key Insights</h3>
+    <ul id="insightList"></ul>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-title">Property Value vs. Outstanding Mortgage</div>
+      <div class="chart-sub">Equity position per property</div>
+      <div style="position:relative;height:270px"><canvas id="equityChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Property Returns vs. Market Benchmarks</div>
+      <div class="chart-sub">Annualised return (CAGR) — property vs. index benchmarks</div>
+      <div style="position:relative;height:270px"><canvas id="returnsChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Opportunity cost table -->
+  <div class="card-wrap">
+    <div class="sec-head">
+      <div>
+        <div class="sec-title">💡 Opportunity Cost Analysis</div>
+        <div class="sec-desc">Annual return comparison — how each property's CAGR stacks up against the market benchmarks, per year</div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="oppTable">
+        <thead class="opp-head">
+          <tr>
+            <th>Property</th>
+            <th>Purchased</th>
+            <th>Years Held</th>
+            <th>Purchase Price</th>
+            <th>Current Value</th>
+            <th>Property CAGR</th>
+            <th>vs S&amp;P 500 (p.a.)</th>
+            <th>vs ASX 200 (p.a.)</th>
+            <th>vs Custom (p.a.)</th>
+          </tr>
+        </thead>
+        <tbody id="oppBody">
+          <tr><td colspan="10" class="empty">Enter property data above to see opportunity cost analysis</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Growth over time -->
+  <div class="card-wrap">
+    <div class="growth-head">
+      <div>
+        <div class="sec-title">📈 Growth Over Time — Hypothetical Comparison</div>
+        <div class="sec-desc">What the purchase price would have grown to in each market vs. the property's actual value</div>
+      </div>
+      <select id="propSelector" onchange="buildGrowthChart()">
+        <option value="">— add properties above —</option>
+      </select>
+    </div>
+    <div style="padding:18px;position:relative;height:370px">
+      <canvas id="growthChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════
+const CY = 2026;
+let charts = {};
+const $ = id => document.getElementById(id);
+
+// ═══════════════════════════════════════════
+// FORMAT HELPERS
+// ═══════════════════════════════════════════
+function fmt(n) {
+  if (n == null || isNaN(n)) return '—';
+  return '$' + Math.round(n).toLocaleString('en-AU');
+}
+function fmtForInput(n) {
+  // Formats a raw number into a comma-separated string for pre-filling inputs
+  if (!n && n !== 0) return '';
+  return Math.round(n).toLocaleString('en-AU');
+}
+function fmtPct(n, dp=2) {
+  if (n == null || isNaN(n)) return '—';
+  return (n >= 0 ? '+' : '') + n.toFixed(dp) + '%';
+}
+function fmtPctPlain(n, dp=2) {
+  if (n == null || isNaN(n)) return '—';
+  return n.toFixed(dp) + '%';
+}
+function parseMoney(s) {
+  if (!s && s !== 0) return null;
+  const v = parseFloat(String(s).replace(/[^0-9.]/g, ''));
+  return isNaN(v) ? null : v;
+}
+
+// ═══════════════════════════════════════════
+// LIVE COMMA FORMATTING FOR MONEY INPUTS
+// ═══════════════════════════════════════════
+function onMoneyInput(input) {
+  const pos    = input.selectionStart;
+  const oldLen = input.value.length;
+  // Strip to digits only (no decimals for dollar amounts)
+  const digits = input.value.replace(/[^0-9]/g, '');
+  if (!digits) { input.value = ''; recalcRow(input); return; }
+  const formatted = parseInt(digits, 10).toLocaleString('en-AU');
+  input.value = formatted;
+  // Shift cursor to account for inserted/removed commas
+  const diff    = formatted.length - oldLen;
+  const newPos  = Math.max(0, pos + diff);
+  try { input.setSelectionRange(newPos, newPos); } catch(e) {}
+  recalcRow(input);
+}
+
+// ═══════════════════════════════════════════
+// CALCULATIONS
+// ═══════════════════════════════════════════
+function calcCagr(purchase, current, years) {
+  if (!purchase || !current || years <= 0) return null;
+  return (Math.pow(current / purchase, 1 / years) - 1) * 100;
+}
+function calcTotalReturn(purchase, current) {
+  if (!purchase || !current) return null;
+  return ((current / purchase) - 1) * 100;
+}
+function fvAtRate(principal, ratePercent, years) {
+  if (!principal || years <= 0) return null;
+  return principal * Math.pow(1 + ratePercent / 100, years);
+}
+
+// ═══════════════════════════════════════════
+// ADD PROPERTY ROW
+// ═══════════════════════════════════════════
+function propTypeOptions(sel='Investment Property') {
+  return ['Principal Residence (PPOR)','Investment Property','Commercial','Holiday Home','Land','Other']
+    .map(o => `<option${o===sel?' selected':''}>${o}</option>`).join('');
+}
+
+function addPropRow(d={}) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input type="text" placeholder="e.g. 42 Smith St, Melbourne" value="${d.name||''}" oninput="recalcRow(this)"></td>
+    <td><select onchange="recalcRow(this)">${propTypeOptions(d.type)}</select></td>
+    <td><input type="number" data-f="year"     class="num-inp" placeholder="${CY-10}" min="1950" max="${CY}" value="${d.year||''}" style="width:74px" oninput="recalcRow(this)"></td>
+    <td><input type="text"   data-f="purchase" class="num-inp" placeholder="500,000"  value="${fmtForInput(d.purchase)}" style="width:116px" oninput="onMoneyInput(this)"></td>
+    <td><input type="text"   data-f="current"  class="num-inp" placeholder="800,000"  value="${fmtForInput(d.current)}"  style="width:116px" oninput="onMoneyInput(this)"></td>
+    <td class="calc-td"><span class="c-years">—</span></td>
+    <td class="calc-td"><span class="c-cagr">—</span></td>
+    <td class="calc-td"><span class="c-total">—</span></td>
+    <td class="calc-td col-divider"><span class="c-equity">—</span></td>
+    <td class="liab-td"><input type="text"   data-f="mortgage" class="num-inp" placeholder="0"    value="${fmtForInput(d.mortgage)}" style="width:116px" oninput="onMoneyInput(this)"></td>
+    <td class="liab-td"><input type="number" data-f="rate"     class="num-inp" placeholder="6.20" value="${d.rate||''}" min="0" max="30" step="0.01" style="width:74px" oninput="recalcRow(this)"></td>
+    <td class="liab-td"><input type="text" placeholder="e.g. Variable, ANZ" value="${d.loanNote||''}"></td>
+    <td><button class="btn btn-del" onclick="this.closest('tr').remove();refreshAnalysis()">✕</button></td>`;
+  $('propBody').appendChild(tr);
+  recalcRow(tr.querySelector('[data-f="year"]'));
+}
+
+// ═══════════════════════════════════════════
+// ROW-LEVEL RECALC
+// ═══════════════════════════════════════════
+function recalcRow(inputEl) {
+  const tr = inputEl.closest('tr');
+  if (!tr) return;
+
+  const q    = f => tr.querySelector(`[data-f="${f}"]`);
+  const year     = parseInt(q('year')?.value);
+  const purchase = parseMoney(q('purchase')?.value);
+  const current  = parseMoney(q('current')?.value);
+  const mortgage = parseMoney(q('mortgage')?.value) || 0;
+  const years    = CY - year;
+  const cagr     = calcCagr(purchase, current, years);
+  const tot      = calcTotalReturn(purchase, current);
+  const equity   = current != null ? current - mortgage : null;
+
+  const setSpan = (cls, text, colorCls) => {
+    const el = tr.querySelector(cls);
+    if (!el) return;
+    el.textContent = text;
+    el.classList.remove('pos', 'neg');
+    if (colorCls) el.classList.add(colorCls);
+  };
+
+  setSpan('.c-years',  isNaN(years)||years<0 ? '—' : years + ' yrs');
+  setSpan('.c-cagr',   fmtPctPlain(cagr),  cagr===null   ? '' : cagr>=0   ? 'pos' : 'neg');
+  setSpan('.c-total',  fmtPct(tot),         tot===null    ? '' : tot>=0    ? 'pos' : 'neg');
+  setSpan('.c-equity', equity!=null ? fmt(equity) : '—', equity===null ? '' : equity>=0 ? 'pos' : 'neg');
+
+  refreshAnalysis();
+}
+
+function recalcAll() {
+  $('propBody').querySelectorAll('tr').forEach(tr => {
+    const trigger = tr.querySelector('[data-f="year"]');
+    if (trigger) recalcRow(trigger);
+  });
+  if (!$('propBody').querySelector('tr')) refreshAnalysis();
+}
+
+// ═══════════════════════════════════════════
+// DATA EXTRACTION
+// ═══════════════════════════════════════════
+function getPropData() {
+  return Array.from($('propBody').querySelectorAll('tr')).map(tr => {
+    const q      = f => tr.querySelector(`[data-f="${f}"]`);
+    const ins    = tr.querySelectorAll('input');
+    const sel    = tr.querySelector('select');
+    const name     = ins[0].value.trim();
+    const type     = sel ? sel.value : '';
+    const year     = parseInt(q('year')?.value);
+    const purchase = parseMoney(q('purchase')?.value);
+    const current  = parseMoney(q('current')?.value);
+    const mortgage = parseMoney(q('mortgage')?.value) || 0;
+    const rate     = parseFloat(q('rate')?.value)     || null;
+    const loanNote = ins[ins.length - 2]?.value || ''; // second-last input = loan notes text
+    const years    = CY - year;
+    const cagr     = calcCagr(purchase, current, years);
+    const tot      = calcTotalReturn(purchase, current);
+    const equity   = current != null ? current - mortgage : null;
+    return { name, type, year, purchase, current, mortgage, rate, loanNote, years, cagr, totalReturn:tot, equity };
+  }).filter(d => d.name || d.purchase || d.current);
+}
+
+// ═══════════════════════════════════════════
+// ANALYSIS REFRESH
+// ═══════════════════════════════════════════
+function refreshAnalysis() {
+  const props = getPropData();
+  const sp500 = parseFloat($('sp500Rate').value) || 10;
+  const asx   = parseFloat($('asx200Rate').value) || 9;
+  const cust  = parseFloat($('customRate').value) || 7;
+
+  const totalValue    = props.reduce((s,p) => s + (p.current||0), 0);
+  const totalMortgage = props.reduce((s,p) => s + (p.mortgage||0), 0);
+  const totalEquity   = totalValue - totalMortgage;
+  const lvr           = totalValue > 0 ? (totalMortgage / totalValue * 100) : 0;
+  const totalCost     = props.reduce((s,p) => s + (p.purchase||0), 0);
+  const withCagr      = props.filter(p => p.cagr !== null);
+  const beatSP        = withCagr.filter(p => p.cagr >= sp500).length;
+
+  // ── Summary cards ──
+  $('sumGrid').innerHTML = `
+    <div class="sum-card navy"><div class="lbl">Total Property Value</div><div class="val">${fmt(totalValue)}</div><div class="sub">${props.length} propert${props.length===1?'y':'ies'}</div></div>
+    <div class="sum-card green"><div class="lbl">Total Equity</div><div class="val">${fmt(totalEquity)}</div><div class="sub">Value minus mortgages</div></div>
+    <div class="sum-card red"><div class="lbl">Total Debt</div><div class="val">${fmt(totalMortgage)}</div><div class="sub">Outstanding mortgages</div></div>
+    <div class="sum-card"><div class="lbl">Portfolio LVR</div><div class="val">${lvr.toFixed(0)}%</div><div class="sub">Loan-to-value ratio</div></div>
+    <div class="sum-card"><div class="lbl">Total Purchase Cost</div><div class="val">${fmt(totalCost)}</div><div class="sub">Sum of purchase prices</div></div>
+    <div class="sum-card ${withCagr.length>0 && beatSP===0 ? 'amber' : ''}">
+      <div class="lbl">Beat S&amp;P 500</div>
+      <div class="val">${beatSP} / ${withCagr.length}</div>
+      <div class="sub">propert${beatSP===1?'y':'ies'} outperformed</div>
+    </div>`;
+
+  // ── Insights ──
+  const insights = [];
+  if (lvr > 70) insights.push(`Portfolio LVR is ${lvr.toFixed(0)}% — high leverage amplifies both gains and losses.`);
+  props.forEach(p => {
+    if (p.cagr !== null) {
+      const gap = p.cagr - sp500;
+      if (gap < -1) {
+        insights.push(`${p.name||'A property'} returned ${fmtPctPlain(p.cagr)} p.a. — that's ${Math.abs(gap).toFixed(2)}% p.a. below the S&P 500 (${sp500}%) compounded over ${p.years} years.`);
+      } else if (p.cagr >= sp500) {
+        insights.push(`${p.name||'A property'} outperformed the S&P 500 — ${fmtPctPlain(p.cagr)} p.a. vs ${sp500}% p.a. Well done.`);
+      }
+    }
+  });
+  if (insights.length > 0) {
+    $('insightBox').style.display = '';
+    $('insightList').innerHTML = insights.map(i => `<li>${i}</li>`).join('');
+  } else {
+    $('insightBox').style.display = 'none';
+  }
+
+  buildEquityChart(props);
+  buildReturnsChart(props, sp500, asx, cust);
+  buildOppTable(props, sp500, asx, cust);
+  updatePropSelector(props);
+}
+
+// ═══════════════════════════════════════════
+// CHART: EQUITY
+// ═══════════════════════════════════════════
+function buildEquityChart(props) {
+  if (charts.equity) charts.equity.destroy();
+  if (props.length === 0) return;
+  const labels = props.map((p,i) => p.name || 'Property '+(i+1));
+  const equity = props.map(p => Math.max(0, Math.round(p.equity||0)));
+  const debt   = props.map(p => Math.max(0, Math.round(p.mortgage||0)));
+  const ctx    = $('equityChart').getContext('2d');
+  charts.equity = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [
+      { label:'Equity',   data:equity, backgroundColor:'#15803d', borderRadius:4, borderSkipped:false },
+      { label:'Mortgage', data:debt,   backgroundColor:'#dc2626', borderRadius:4, borderSkipped:false }
+    ]},
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {
+        legend:{ position:'top', labels:{ font:{size:11}, boxWidth:12 } },
+        tooltip:{ callbacks:{ label: c => ` ${c.dataset.label}: ${fmt(c.raw)}` } }
+      },
+      scales: {
+        x:{ stacked:true, grid:{display:false}, ticks:{font:{size:11}} },
+        y:{ stacked:true, ticks:{ callback: v => v>=1e6?'$'+(v/1e6).toFixed(1)+'M':'$'+(v/1e3).toFixed(0)+'K' }, grid:{color:'#f0f4f8'} }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════
+// CHART: RETURNS VS BENCHMARKS
+// ═══════════════════════════════════════════
+function buildReturnsChart(props, sp500, asx, cust) {
+  if (charts.returns) charts.returns.destroy();
+  const propLabels = props.map((p,i) => p.name || ('Prop '+(i+1)));
+  const propVals   = props.map(p => p.cagr !== null ? parseFloat(p.cagr.toFixed(2)) : 0);
+  const propColors = props.map(p => p.cagr === null ? '#cbd5e0' : '#16a34a');
+  const labels = [...propLabels, 'S&P 500',  'ASX 200',  'Custom'];
+  const values = [...propVals,    sp500,       asx,        cust];
+  const colors = [...propColors, '#2563a8',  '#f59e0b',  '#7c3aed'];
+  const ctx    = $('returnsChart').getContext('2d');
+  charts.returns = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label:'Annual Return %', data:values, backgroundColor:colors, borderRadius:6, borderSkipped:false }] },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {
+        legend:{display:false},
+        tooltip:{ callbacks:{ label: c => ` ${c.raw.toFixed(2)}% p.a.` } }
+      },
+      scales: {
+        y:{ ticks:{ callback: v => v+'%' }, grid:{color:'#f0f4f8'} },
+        x:{ grid:{display:false}, ticks:{font:{size:11}} }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════
+// OPPORTUNITY COST TABLE  — % TERMS
+// ═══════════════════════════════════════════
+function buildOppTable(props, sp500, asx, cust) {
+  if (props.length === 0) {
+    $('oppBody').innerHTML = '<tr><td colspan="9" class="empty">Enter property data above to see this analysis</td></tr>';
+    return;
+  }
+
+  // Returns a coloured td showing the annual % gap
+  const diffCell = (propCagr, benchmark) => {
+    if (propCagr === null) return '<td style="text-align:center;color:#a0aec0">—</td>';
+    const gap = propCagr - benchmark;
+    if (gap >= 0) return `<td class="beat" style="text-align:center">▲ +${gap.toFixed(2)}% p.a.</td>`;
+    return `<td class="missed" style="text-align:center">▼ ${gap.toFixed(2)}% p.a.</td>`;
+  };
+
+  $('oppBody').innerHTML = props.map(p => `
+    <tr>
+      <td><strong>${p.name||'Unnamed'}</strong><br><small style="color:#718096">${p.type||''}</small></td>
+      <td style="text-align:center">${p.year||'—'}</td>
+      <td style="text-align:center">${isNaN(p.years)||p.years<0?'—':p.years+' yrs'}</td>
+      <td style="text-align:right">${fmt(p.purchase)}</td>
+      <td style="text-align:right">${fmt(p.current)}</td>
+      <td style="text-align:center;font-weight:800">${fmtPctPlain(p.cagr)}</td>
+      ${diffCell(p.cagr, sp500)}
+      ${diffCell(p.cagr, asx)}
+      ${diffCell(p.cagr, cust)}
+    </tr>`).join('');
+}
+
+// ═══════════════════════════════════════════
+// GROWTH CHART
+// ═══════════════════════════════════════════
+function updatePropSelector(props) {
+  const sel  = $('propSelector');
+  const prev = sel.value;
+  sel.innerHTML = props.length === 0
+    ? '<option value="">— add properties above —</option>'
+    : props.map((p,i) => `<option value="${i}">${p.name||'Property '+(i+1)}</option>`).join('');
+  if (prev !== '' && sel.querySelector(`[value="${prev}"]`)) sel.value = prev;
+  if (props.length > 0) buildGrowthChart();
+  else if (charts.growth) { charts.growth.destroy(); charts.growth = null; }
+}
+
+function buildGrowthChart() {
+  const props = getPropData();
+  const idx   = parseInt($('propSelector').value) || 0;
+  const p     = props[idx];
+  if (!p || !p.year || !p.purchase) {
+    if (charts.growth) charts.growth.destroy();
+    return;
+  }
+  const sp500 = parseFloat($('sp500Rate').value) || 10;
+  const asx   = parseFloat($('asx200Rate').value) || 9;
+  const cust  = parseFloat($('customRate').value) || 7;
+
+  const numYears  = CY - p.year;
+  const yearLabels = Array.from({length: numYears+1}, (_,i) => p.year + i);
+
+  const propLine  = yearLabels.map((_,i) => p.cagr!==null ? p.purchase * Math.pow(1+p.cagr/100, i) : null);
+  const sp500Line = yearLabels.map((_,i) => fvAtRate(p.purchase, sp500, i));
+  const asxLine   = yearLabels.map((_,i) => fvAtRate(p.purchase, asx,   i));
+  const custLine  = yearLabels.map((_,i) => fvAtRate(p.purchase, cust,  i));
+
+  if (charts.growth) charts.growth.destroy();
+  const ctx = $('growthChart').getContext('2d');
+  charts.growth = new Chart(ctx, {
+    type: 'line',
+    data: { labels: yearLabels, datasets: [
+      { label: p.name||'Property',   data:propLine,  borderColor:'#1a3a5c', backgroundColor:'rgba(26,58,92,.09)', borderWidth:3, pointRadius:3, fill:true,  tension:.35 },
+      { label:`S&P 500 @ ${sp500}%`, data:sp500Line, borderColor:'#dc2626', borderWidth:2, borderDash:[7,4], pointRadius:0, fill:false, tension:.35 },
+      { label:`ASX 200 @ ${asx}%`,   data:asxLine,   borderColor:'#ea580c', borderWidth:2, borderDash:[7,4], pointRadius:0, fill:false, tension:.35 },
+      { label:`Custom @ ${cust}%`,   data:custLine,  borderColor:'#7c3aed', borderWidth:2, borderDash:[4,4], pointRadius:0, fill:false, tension:.35 }
+    ]},
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {
+        legend:{ position:'top', labels:{font:{size:12}, boxWidth:16} },
+        tooltip:{ callbacks:{ label: c => ` ${c.dataset.label}: ${fmt(c.raw)}` } }
+      },
+      scales: {
+        y:{ ticks:{ callback: v => v>=1e6?'$'+(v/1e6).toFixed(1)+'M':'$'+(v/1e3).toFixed(0)+'K' }, grid:{color:'#f0f4f8'} },
+        x:{ grid:{display:false} }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════
+// EXAMPLE DATA
+// ═══════════════════════════════════════════
+function loadExample() {
+  $('propBody').innerHTML = '';
+  $('clientName').value   = 'David & Sarah Thompson';
+  addPropRow({ name:'42 Banksia Ave, Melbourne', type:'Principal Residence (PPOR)', year:2010, purchase:620000, current:1250000, mortgage:185000, rate:5.99, loanNote:'Variable — Commonwealth Bank' });
+  addPropRow({ name:'8/12 Collins St, Brisbane',  type:'Investment Property',        year:2015, purchase:480000, current:660000,  mortgage:390000, rate:6.34, loanNote:'Interest only — Westpac' });
+  addPropRow({ name:'Lot 14 Coastal Dr, Noosa',   type:'Investment Property',        year:2018, purchase:720000, current:940000,  mortgage:610000, rate:6.59, loanNote:'Variable — ANZ' });
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+window.onload = () => {
+  $('reportDate').value = new Date().toLocaleDateString('en-AU', {day:'2-digit', month:'long', year:'numeric'});
+  addPropRow();
+  refreshAnalysis();
+};
+</script>
+</body>
+</html>
